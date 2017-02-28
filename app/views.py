@@ -66,6 +66,12 @@ def add_header(response):
     response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
     response.headers['Cache-Control'] = 'public, max-age=0'
     return response
+    
+@app.route('/secure-page')
+@login_required
+def secure_page():
+    return render_template('secure_page.html')
+    
 
 
 @app.errorhandler(404)

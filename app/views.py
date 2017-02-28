@@ -29,18 +29,11 @@ def about():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
-    if request.method == "POST":
+    if form.validate_on_submit():
         # change this to actually validate the entire form submission
         # and not just one field
-        if form.username.data:
-            # Get the username and password values from the form.
-
-            # using your model, query database for a user based on the username
-            # and password submitted
-            # store the result of that query to a `user` variable so it can be
-            # passed to the login_user() method.
-
-            # get user id, load into session
+        user = User.query.filter_by(username=form.username.data).first()
+        password = Password.query.filter_by(password=form.password.data).first(
             login_user(user)
 
             # remember to flash a message to the user

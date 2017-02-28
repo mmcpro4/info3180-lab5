@@ -72,6 +72,12 @@ def add_header(response):
 def secure_page():
     return render_template('secure_page.html')
     
+@app.route('/logout') 
+def logout():     
+    logout_user()     
+    flash('Logged out.')
+    return redirect(url_for('home')) 
+    
 
 
 @app.errorhandler(404)

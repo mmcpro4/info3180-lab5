@@ -1,62 +1,84 @@
-"""
-Flask Documentation:     http://flask.pocoo.org/docs/
-Jinja2 Documentation:    http://jinja.pocoo.org/2/documentation/
-Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
-This file creates your application.
-"""
-
-from app import app, db, login_manager
-from flask import render_template, request, redirect, url_for, flash
-from flask_login import login_user, logout_user, current_user, login_required
-from forms import LoginForm
-from models import UserProfile
-
-
-###
-# Routing for your application.
-###
-
-@app.route('/')
-def home():
-    """Render website's home page."""
-    return render_template('home.html')
-
-@app.route('/about/')
-def about():
-    """Render the website's about page."""
-    return render_template('about.html')
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        # change this to actually validate the entire form submission
-        # and not just one field
-        user = User.query.filter_by(username=form.username.data).first()
-        password = Password.query.filter_by(password=form.password.data).first(
-            login_user(user)
-
-            # remember to flash a message to the user
-            return redirect(url_for("home")) # they should be redirected to a secure-page route instead
-    return render_template("login.html", form=form)
-
-# user_loader callback. This callback is used to reload the user object from
-# the user ID stored in the session
-@login_manager.user_loader
-def load_user(id):
-    return UserProfile.query.get(int(id))
-
-###
-# The functions below should be applicable to all Flask apps.
-###
-
-@app.route('/<file_name>.txt')
-def send_text_file(file_name):
-    """Send your static text file."""
-    file_dot_text = file_name + '.txt'
-    return app.send_static_file(file_dot_text)
+import os
+from flask import session,render_template, request, redirect, url_for, jsonify,flash
+SECRET_KEY="secretkeysecretkeytwice2"
+from random import randint
+from werkzeug.utils import secure_filename
+from app.models import UserProfile
+from sqlalchemy.sql import exists
+from datetime import *
+from app import app,db
+from flask_wtf.file import FileField, FileRequired
+import time
 
 
+
+
+@app.route('/profile/',methods = ['GET'])
+def add_profile_GET():
+    return render_template('profileform.html',form=form)
+    
+@app.route('/profile/',methods = ['POST'])
+def add_profile_POST():
+    form = ProfileForm(csrf_enabled=False)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            f_name = request.form['f_name'].strip()
+            l_name = request.form['l_name'].strip()
+            gender = request.form['gender']
+            age = request.form['age']
+            image = request.files['image']
+            bio = request.form['bio'].strip()
+            while True:
+                u_id = randint(0000,9999)
+                if not db.session.query(exists().where(UserProfile.u_id == str(u_id))).scalar():
+                    break
+            filename = secure_filename(image.filename)
+            image.save(os.path.join('app/static/uploads', filename))
+            created_on = datetime.now()
+            user_profile = UserProfile(u_id,f_name,l_name,gender,age,filename,created_on)
+            db.session.add(user_profile)
+            db.session.commit()
+            flash("User Successfully Added", category='success')
+            return redirect('/profiles')
+    return render_template('profileform.html',form=form)
+    
+    
+@app.route('/profiles', methods=["GET", "POST"])
+def profiles():
+  users = db.session.query(UserProfile).all()
+  userlst=[]
+  for user in users:
+    userlst.append({'username':UserProfile.f_name+' '+UserProfile.l_name,'userid':UserProfile.u_id})
+    if request.method == 'POST' and request.headers['Content-Type']== 'application/json':
+        return jsonify(users=userlst)
+
+@app.route('/profile/<u_id>', methods=['GET'])
+def ind_profile(u_id):
+  user = UserProfile.query.filter_by(u_id=u_id).first()
+  if not user:
+      flash("User not found" , category="error")
+  else:
+      image = '/static/uploads/' + user.image
+      user = {'id':user.u_id,'image':image, 'username':user.f_name+' '+user.l_name,'first_name':user.f_name, 'last_name':user.l_name,'age':user.age, 'gender':user.gender,'bio':user.bio,'created_on':times(user.created_on)}
+      return render_template('profile.html', user=user)
+  return redirect(url_for("profiles"))    
+
+
+@app.route('/profile/<userid>', methods=['POST'])
+def indv_profile(u_id):
+  user = UserProfile.query.filter_by(u_id=u_id).first()
+  if not user:
+      flash("User not found" , category="error")
+  else:
+      image = '/static/uploads/' + user.image
+      if request.method == 'POST' and request.headers['Content-Type']== 'application/json':
+            return jsonify(u_id=user.u_id, image=image,username=user.username, sex=user.sex, age=user.age,created_on=user.created_on)
+      else:
+            user = {'id':user.u_id,'image':image, 'username':user.f_name+' '+user.l_name,'first_name':user.f_name, 'last_name':user.l_name,'age':user.age, 'gender':user.gender,'bio':user.bio,'created_on':times(user.created_on)}
+            return render_template('profile.html', user=user)
+  return redirect(url_for("profiles"))
+  
+  
 @app.after_request
 def add_header(response):
     """
@@ -64,21 +86,14 @@ def add_header(response):
     and also to cache the rendered page for 10 minutes.
     """
     response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
-    response.headers['Cache-Control'] = 'public, max-age=0'
+    response.headers['Cache-Control'] = 'public, max-age=600'
     return response
     
-@app.route('/secure-page')
-@login_required
-def secure_page():
-    return render_template('secure_page.html')
-    
-@app.route('/logout') 
-def logout():     
-    logout_user()     
-    flash('Logged out.')
-    return redirect(url_for('home')) 
-    
-
+def times(entry):
+    day = time.strftime("%a")
+    month = time.strftime("%b")
+    year = time.strftime("%Y")
+    return day + " " + month + " " + year
 
 @app.errorhandler(404)
 def page_not_found(error):

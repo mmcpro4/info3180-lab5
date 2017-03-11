@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/css/profile.css">
+{% endblock %}
+{% block main %}
+    <div id="profile-pic">
+         <img id="picture" src="{{user['image']}}">
+    </div>
+    <div class="container">
+  <h2>User Profile</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>{{user['first_name']}} {{user['last_name']}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td id="date">Profile Added On: {{user['profile_added_on']}}</td>
+      </tr>
+      <tr>
+        <td>Username: {{user['username']}}</td>
+      </tr>
+      <tr class="info">
+        <td>ID: {{user['id']}}</td>
+      </tr>
+    <tr class="info">
+        <td>Sex: {{user['sex']}}</td>
+      </tr>
+    <tr class="info">
+        <td>Age: {{user['age']}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
